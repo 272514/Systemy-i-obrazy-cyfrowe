@@ -1,0 +1,43 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import convolve2d
+
+image = np.load('pandas.npy')
+
+mask_G1 = np.zeros_like(image[:, :, 0])
+mask_G1[0::2, 0::2] = 1 
+mask_R = np.zeros_like(image[:, :, 0])
+mask_R[0::2, 1::2] = 1
+mask_B = np.zeros_like(image[:, :, 0])
+mask_B[1::2, 0::2] = 1 
+mask_G2 = np.zeros_like(image[:, :, 0])
+mask_G2[1::2, 1::2] = 1
+
+masked_image = np.zeros_like(image)
+masked_image[:, :, 0] = image[:, :, 0] * mask_R
+masked_image[:, :, 1] = image[:, :, 1] * (mask_G1 + mask_G2)
+masked_image[:, :, 2] = image[:, :, 2] * mask_B
+
+kernel = np.array([[1/4, 1/2, 1/4],
+                   [1/2, 1.0, 1/2],
+                   [1/4, 1/2, 1/4]])
+
+R = convolve2d(masked_image[:, :, 0] * mask_R, kernel, boundary='symm', mode='same')
+G1 = convolve2d(masked_image[:, :, 1] * mask_G1, kernel, boundary='symm', mode='same')
+B = convolve2d(masked_image[:, :, 2] * mask_B, kernel, boundary='symm', mode='same')
+G2 = convolve2d(masked_image[:, :, 1] * mask_G2, kernel, boundary='symm', mode='same')
+G = (G1 + G2) / 2
+
+demosaicked_image = np.clip(np.dstack((R, G, B)), 0, 1)
+
+fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+
+axs[0].imshow(masked_image)
+axs[0].set_title('Image with Bayer GRBG Mask')
+axs[0].axis('off')
+
+axs[1].imshow(demosaicked_image)
+axs[1].set_title('Demosaicked Image')
+axs[1].axis('off')
+
+plt.show()
