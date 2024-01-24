@@ -1,0 +1,49 @@
+from PIL import Image
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.fftpack import fftn, ifftn, fftshift
+
+image_path = 'panda.jpg'
+image = Image.open(image_path)
+
+gray_image = image.convert('L')
+
+gray_array = np.array(gray_image)
+
+noise = np.random.normal(0, 15, gray_array.shape)
+noisy_array = np.clip(gray_array + noise, 0, 255).astype('uint8')
+
+noisy_image = Image.fromarray(noisy_array)
+
+f_transform = fftn(noisy_array)
+f_shifted = fftshift(f_transform)
+rows, cols = f_shifted.shape
+crow, ccol = rows//2, cols//2
+keep_fraction = 0.1
+mask = np.zeros((rows, cols), np.uint8)
+mask[crow-int(rows*keep_fraction):crow+int(rows*keep_fraction),
+     ccol-int(cols*keep_fraction):ccol+int(cols*keep_fraction)] = 1
+f_shifted *= mask
+f_ishifted = fftshift(f_shifted)
+img_back = ifftn(f_ishifted)
+img_back = np.abs(img_back)
+img_back = (img_back / np.max(img_back) * 255).astype('uint8')
+
+denoised_image = Image.fromarray(img_back)
+
+plt.figure(figsize=(18, 6))
+plt.subplot(131)
+plt.imshow(gray_image, cmap='gray')
+plt.title('Original Grayscale')
+plt.axis('off')
+
+plt.subplot(132)
+plt.imshow(noisy_image, cmap='gray')
+plt.title('Noisy Grayscale')
+plt.axis('off')
+
+plt.subplot(133)
+plt.imshow(denoised_image, cmap='gray')
+plt.title('Denoised Grayscale')
+plt.axis('off')
+plt.show()
