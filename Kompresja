@@ -1,0 +1,45 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
+
+def compress_image_fft(image_path, compression_rate):
+
+    compression_rate = max(0, min(100, compression_rate))
+    
+    image = Image.open(image_path)
+
+    gray_image = image.convert('L')
+
+    f = np.fft.fft2(gray_image)
+    fshift = np.fft.fftshift(f)
+
+    magnitude_spectrum = 20 * np.log(np.abs(fshift))
+
+    flat_magnitude = magnitude_spectrum.flatten()
+    threshold = np.percentile(flat_magnitude, compression_rate)
+    
+    fshift[magnitude_spectrum < threshold] = 0
+
+    f_ishift = np.fft.ifftshift(fshift)
+    img_back = np.fft.ifft2(f_ishift)
+    img_back = np.abs(img_back)
+
+    compressed_image = Image.fromarray(img_back.astype('uint8'))
+
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(121)
+    plt.imshow(gray_image, cmap='gray')
+    plt.title('Input Image')
+    plt.axis("off")
+
+    plt.subplot(122)
+    plt.imshow(compressed_image, cmap='gray')
+    plt.title('Compressed Image')
+    plt.axis("off")
+
+    plt.show()
+    
+    return compressed_image, magnitude_spectrum
+
+compress_image_fft('warwick.jpg', 90)
